@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 信用卡優惠查詢器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .custom-shadow { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .tab-active { border-bottom: 4px solid #2563eb; color: #2563eb; }
+        .card-enter { animation: pop 0.3s ease-out; }
+        @keyframes pop {
+            0% { transform: scale(0.98); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .gradient-bg { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+
+<div class="max-w-4xl mx-auto p-4 md:p-8">
+    <!-- Header Area -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <div>
+            <h1 class="text-3xl font-extrabold text-slate-800 flex items-center gap-3">
+                <span class="bg-blue-600 text-white p-2 rounded-xl shadow-lg shadow-blue-200">
+                    <i class="fa-solid fa-wallet"></i>
+                </span>
+                卡神助手
+            </h1>
+            <p class="text-slate-500 mt-1 font-medium" id="dateDisplay">載入中...</p>
+        </div>
+        <div class="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200">
+            <button onclick="switchTab('query')" id="btn-query" class="px-6 py-2 rounded-xl font-bold transition-all text-blue-600 bg-blue-50">
+                優惠查詢
+            </button>
+            <button onclick="switchTab('reminder')" id="btn-reminder" class="px-6 py-2 rounded-xl font-bold transition-all text-slate-400 hover:text-slate-600">
+                還款提醒
+            </button>
+        </div>
+    </header>
+
+    <!-- Tab 1: Smart Query -->
+    <main id="tab-content-query" class="card-enter">
+        <!-- Calculator Card -->
+        <section class="bg-white rounded-[2rem] custom-shadow p-6 md:p-8 mb-8 border border-white">
+            <h2 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <i class="fa-solid fa-wand-magic-sparkles text-blue-500"></i>
+                在哪裡消費？
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-600 ml-1">類別</label>
+                    <select id="category" onchange="handleCategoryChange()" class="w-full bg-slate-50 border-none rounded-2xl p-4 focus:ring-2 focus:ring-blue-500 outline-none font-medium">
+                        <option value="online">本地網購 (HKD)</option>
+                        <option value="dining">本地餐飲 (HKD)</option>
+                        <option value="delivery">外送平台 (Foodpanda/Deliveroo)</option>
+                        <option value="supermarket">超市/百貨 (賞購物)</option>
+                        <option value="medical">醫療/健身 (單筆$300+)</option>
+                        <option value="transport">交通 (車費/隧道)</option>
+                        <option value="streaming">串流娛樂 (Netflix/Spotify)</option>
+                        <option value="overseas">海外簽賬 (外幣)</option>
+                        <option value="other">其他自定義...</option>
+                    </select>
+                </div>
+
+                <div id="customGroup" class="space-y-2 hidden">
+                    <label class="text-sm font-bold text-slate-600 ml-1">項目名稱</label>
+                    <input type="text" id="customInput" placeholder="例如：淘寶、買電腦" class="w-full bg-slate-50 border-none rounded-2xl p-4 focus:ring-2 focus:ring-blue-500 outline-none font-medium">
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-slate-600 ml-1">預算金額 (HKD)</label>
+                    <input type="number" id="amount" placeholder="輸入金額" class="w-full bg-slate-50 border-none rounded-2xl p-4 focus:ring-2 focus:ring-blue-500 outline-none font-medium">
+                </div>
+            </div>
+
+            <button onclick="runAnalysis()" class="w-full mt-8 bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-slate-200 active:scale-[0.98]">
+                分析最佳卡片
+            </button>
+
+            <!-- Result Display -->
+            <div id="resultArea" class="mt-8 hidden">
+                <div class="p-6 rounded-3xl bg-blue-600 text-white shadow-lg shadow-blue-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-blue-100 text-xs font-bold uppercase tracking-widest">推薦卡片</p>
+                        <h3 id="resCardName" class="text-2xl font-black mt-1">---</h3>
+                        <p id="resDetail" class="text-sm mt-2 opacity-90 font-medium">計算中...</p>
+                    </div>
+                    <div class="hidden md:block text-right">
+                        <i class="fa-solid fa-crown text-4xl text-yellow-300"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reference Table -->
+        <section class="bg-white rounded-[2rem] custom-shadow overflow-hidden border border-white">
+            <div class="p-6 border-b border-slate-50">
+                <h3 class="font-bold text-slate-800 italic" id="tableHeader">優惠速報</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-slate-400 text-[10px] uppercase font-black tracking-widest">
+                        <tr>
+                            <th class="px-6 py-4">Card</th>
+                            <th class="px-6 py-4">Best Reward</th>
+                            <th class="px-6 py-4">Highlights</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summaryTable" class="text-sm divide-y divide-slate-50">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Tab 2: Repayment Reminder -->
+    <main id="tab-content-reminder" class="card-enter hidden">
+        <div id="reminderGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Reminder cards injected here -->
+        </div>
+    </main>
+
+    <footer class="mt-12 text-center">
+        <p class="text-slate-400 text-xs font-medium uppercase tracking-tighter">
+            * 資料定期更新 | 請以銀行官方最後公佈為準
+        </p>
+    </footer>
+</div>
+
+<script>
+    // 信用卡邏輯核心
+    const cards = [
+        { id: 'aeon', name: "Aeon Wakuwaku", online: 0.06, dining: 0.01, delivery: 0.06, general: 0.004, supermarket: 0.004, medical: 0.01, transport: 0.004, streaming: 0.06, overseas: 0.03, tags: "網購 6%", limit: "月回贈 $200", condition: "網購神卡", dueDay: 13 },
+        { id: 'scb', name: "SCB Cathay", online: 0.04, dining: 0.25, delivery: 0.25, general: 0.16, supermarket: 0.16, medical: 0.16, transport: 0.16, streaming: 0.16, overseas: 0.25, tags: "$4/里", limit: "無上限", condition: "里數專用", isMiles: true, dueDay: 19 },
+        { id: 'mox', name: "Mox (無存款版)", online: 0.01, dining: 0.01, delivery: 0.01, general: 0.01, supermarket: 0.03, medical: 0.01, transport: 0.01, streaming: 0.01, overseas: 0.01, tags: "超市 3%", limit: "一般僅 1%", condition: "超市必備", dueDay: 11 },
+        { id: 'dbs', name: "DBS Eminent", online: 0.01, dining: 0.05, delivery: 0.01, general: 0.01, supermarket: 0.01, medical: 0.05, transport: 0.01, streaming: 0.01, overseas: 0.01, tags: "指定 5%", limit: "單筆須滿 $300", condition: "醫療餐飲", dueDay: 1 },
+        { id: 'hsbc', name: "HSBC Red", online: 0.04, dining: 0.01, delivery: 0.04, general: 0.01, supermarket: 0.02, medical: 0.01, transport: 0.01, streaming: 0.04, overseas: 0.04, tags: "網購 4%", limit: "首 $10,000", condition: "超市網購通殺", dueDay: 26 },
+        { id: 'sim', name: "Sim Platinum", online: 0.08, dining: 0.004, delivery: 0.08, general: 0.004, supermarket: 0.004, medical: 0.004, transport: 0.08, streaming: 0.08, overseas: 0.004, tags: "高達 8%", limit: "單筆須滿 $500", condition: "大額網購/交通", dueDay: 14 }
+    ];
+
+    function handleCategoryChange() {
+        const cat = document.getElementById('category').value;
+        document.getElementById('customGroup').classList.toggle('hidden', cat !== 'other');
+    }
+
+    function switchTab(tab) {
+        const isQuery = tab === 'query';
+        document.getElementById('tab-content-query').classList.toggle('hidden', !isQuery);
+        document.getElementById('tab-content-reminder').classList.toggle('hidden', isQuery);
+        
+        // Button Styles
+        const bQuery = document.getElementById('btn-query');
+        const bReminder = document.getElementById('btn-reminder');
+        
+        if(isQuery) {
+            bQuery.className = "px-6 py-2 rounded-xl font-bold transition-all text-blue-600 bg-blue-50";
+            bReminder.className = "px-6 py-2 rounded-xl font-bold transition-all text-slate-400 hover:text-slate-600";
+        } else {
+            bReminder.className = "px-6 py-2 rounded-xl font-bold transition-all text-blue-600 bg-blue-50";
+            bQuery.className = "px-6 py-2 rounded-xl font-bold transition-all text-slate-400 hover:text-slate-600";
+            renderReminders();
+        }
+    }
+
+    function runAnalysis() {
+        let cat = document.getElementById('category').value;
+        const custom = document.getElementById('customInput').value.toLowerCase();
+        const amount = parseFloat(document.getElementById('amount').value);
+        if (!amount || amount <= 0) return;
+
+        // Keyword Detection
+        if (cat === 'other' && custom) {
+            if (custom.includes("淘寶") || custom.includes("網購") || custom.includes("電腦")) cat = 'online';
+            else if (custom.includes("食") || custom.includes("餐")) cat = 'dining';
+            else if (custom.includes("超市") || custom.includes("hktv")) cat = 'supermarket';
+            else if (custom.includes("車") || custom.includes("巴士")) cat = 'transport';
+            else cat = 'general';
+        }
+
+        let best = null;
+        let maxVal = -1;
+
+        cards.forEach(card => {
+            let rate = card[cat] || card.general;
+            let val = card.isMiles ? (amount * rate * 0.1) : (amount * rate);
+            
+            // Limit Checks
+            if (card.id === 'dbs' && amount < 300 && (cat === 'dining' || cat === 'medical')) val = amount * 0.01;
+            if (card.id === 'sim' && amount < 500 && (cat === 'online' || cat === 'delivery' || cat === 'transport')) val = amount * 0.004;
+
+            if (val > maxVal) {
+                maxVal = val;
+                best = card;
+            }
+        });
+
+        document.getElementById('resultArea').classList.remove('hidden');
+        document.getElementById('resCardName').innerText = best.name;
+        document.getElementById('resDetail').innerText = `預計賺取價值: $${maxVal.toFixed(2)} (${(maxVal/amount*100).toFixed(1)}% 回饋) | ${best.limit}`;
+    }
+
+    function getRemainingDays(dueDay) {
+        const now = new Date();
+        let due = new Date(now.getFullYear(), now.getMonth(), dueDay);
+        // 如果今天的日期大於等於還款日，則計算下個月的還款日
+        if (now.getDate() >= dueDay) {
+            due.setMonth(due.getMonth() + 1);
+        }
+        // 使用時間差計算天數並向上取整
+        const diffTime = due.getTime() - now.getTime();
+        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+
+    function renderReminders() {
+        const container = document.getElementById('reminderGrid');
+        container.innerHTML = "";
+        
+        const sorted = [...cards].sort((a, b) => getRemainingDays(a.dueDay) - getRemainingDays(b.dueDay));
+        
+        sorted.forEach(card => {
+            const left = getRemainingDays(card.dueDay);
+            const isUrgent = left <= 3;
+            const cardEl = document.createElement('div');
+            cardEl.className = `p-6 rounded-[2rem] border-2 transition-all ${isUrgent ? 'bg-red-50 border-red-100 shadow-lg shadow-red-100' : 'bg-white border-slate-50'}`;
+            cardEl.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <span class="font-black text-slate-800">${card.name}</span>
+                    <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${isUrgent ? 'bg-red-500 text-white' : 'bg-slate-100 text-slate-400'}">
+                        每月 ${card.dueDay} 日
+                    </span>
+                </div>
+                <div class="flex items-end justify-between">
+                    <p class="text-sm font-bold ${isUrgent ? 'text-red-600' : 'text-slate-400'}">距離還款剩餘</p>
+                    <p class="text-4xl font-black ${isUrgent ? 'text-red-600' : 'text-slate-800'}">${left} <span class="text-lg">天</span></p>
+                </div>
+            `;
+            container.appendChild(cardEl);
+        });
+    }
+
+    function init() {
+        // Render Table
+        const t = document.getElementById('summaryTable');
+        t.innerHTML = ""; // 清空表格
+        cards.forEach(c => {
+            t.innerHTML += `
+                <tr class="hover:bg-slate-50/50 transition-colors">
+                    <td class="px-6 py-4 font-bold text-slate-700">${c.name}</td>
+                    <td class="px-6 py-4"><span class="text-blue-600 font-black">${c.tags}</span></td>
+                    <td class="px-6 py-4 text-xs text-slate-500">${c.condition}</td>
+                </tr>
+            `;
+        });
+        
+        // 動態獲取今天日期
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const date = now.getDate();
+        const dayNames = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+        const dayName = dayNames[now.getDay()];
+        
+        document.getElementById('dateDisplay').innerText = `${year}年${month}月${date}日 ${dayName} | 系統運行中`;
+        document.getElementById('tableHeader').innerText = `${year}.${month < 10 ? '0'+month : month} 優惠速報`;
+    }
+
+    window.onload = init;
+</script>
+
+</body>
+</html>
