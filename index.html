@@ -3,377 +3,527 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 信用卡優惠查詢器</title>
+    <title>信用卡神助手 4.5 - AI 智能分析版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        .custom-shadow { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
-        .modal-enter { animation: fadeIn 0.2s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .gradient-bg { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        :root {
+            --primary-dark: #111FA2;
+            --primary-mid: #5478FF;
+            --primary-light: #53CBF3;
+        }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: linear-gradient(135deg, #f0f7ff 0%, #e0e7ff 100%); min-height: 100vh; }
+        .custom-shadow { box-shadow: 0 10px 25px -5px rgba(17, 31, 162, 0.1), 0 8px 10px -6px rgba(17, 31, 162, 0.05); }
+        .glass-morphism { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.5); }
         
-        /* 模擬卡片樣式 */
-        .card-preview {
-            aspect-ratio: 1.58 / 1;
-            position: relative;
-            overflow: hidden;
-            border-radius: 1rem;
-            transition: all 0.3s ease;
+        .modal-overlay { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); transition: all 0.3s; z-index: 100; }
+        .rank-badge { position: absolute; top: -10px; left: -10px; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; color: white; border: 2px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 10; }
+        
+        .tab-active { color: #111FA2; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        .card-preview { aspect-ratio: 1.58 / 1; position: relative; overflow: hidden; border-radius: 1.25rem; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .card-done { filter: grayscale(1); opacity: 0.5; transform: scale(0.95); }
+        .chip { width: 40px; height: 30px; background: linear-gradient(135deg, #FFDE42, #d4b830); border-radius: 6px; box-shadow: inset 0 1px 2px rgba(255,255,255,0.8); }
+
+        .loading-shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
         }
-        .card-done { filter: grayscale(1); opacity: 0.6; }
-        .chip {
-            width: 35px;
-            height: 25px;
-            background: linear-gradient(135deg, #ffd700, #b8860b);
-            border-radius: 4px;
-        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
 </head>
-<body class="gradient-bg min-h-screen">
+<body class="text-slate-900 pb-12">
 
-<div class="max-w-4xl mx-auto p-4 md:p-8">
-    <!-- Header -->
-    <header class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+<div class="max-w-5xl mx-auto p-4 md:p-8">
+    <header class="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
         <div>
-            <h1 class="text-3xl font-extrabold text-slate-800 flex items-center gap-3">
-                <span class="bg-blue-600 text-white p-2 rounded-xl shadow-lg shadow-blue-200">
-                    <i class="fa-solid fa-wallet"></i>
+            <h1 class="text-4xl font-black text-slate-800 flex items-center gap-3 tracking-tight">
+                <span class="bg-[#111FA2] text-white p-2.5 rounded-2xl shadow-xl shadow-blue-200">
+                    <i class="fa-solid fa-brain"></i>
                 </span>
-                卡神助手 2.2
+                卡神助手 4.5
             </h1>
-            <p class="text-slate-500 mt-1 font-medium" id="dateDisplay">載入中...</p>
+            <p class="text-slate-500 mt-2 font-medium">AI 智能消費分析與持卡管理</p>
         </div>
-        <div class="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200">
-            <button onclick="switchTab('query')" id="btn-query" class="px-6 py-2 rounded-xl font-bold transition-all text-blue-600 bg-blue-50">優惠查詢</button>
-            <button onclick="switchTab('reminder')" id="btn-reminder" class="px-6 py-2 rounded-xl font-bold transition-all text-slate-400 hover:text-slate-600">還款提醒</button>
+        <div class="flex bg-slate-200/50 p-1.5 rounded-2xl shadow-inner w-fit overflow-x-auto">
+            <button onclick="switchSection('decision')" id="btn-decision" class="whitespace-nowrap px-6 py-2.5 rounded-xl font-bold transition-all tab-active">消費決策</button>
+            <button onclick="switchSection('reminder')" id="btn-reminder" class="whitespace-nowrap px-6 py-2.5 rounded-xl font-bold transition-all text-slate-500">還款提醒</button>
+            <button onclick="switchSection('table')" id="btn-table" class="whitespace-nowrap px-6 py-2.5 rounded-xl font-bold transition-all text-slate-500">優惠全集</button>
         </div>
     </header>
 
-    <!-- Tab 1: Smart Query -->
-    <main id="tab-content-query" class="space-y-8">
-        <section class="bg-white rounded-[2rem] custom-shadow p-6 md:p-8 border border-white">
-            <h2 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                <i class="fa-solid fa-wand-magic-sparkles text-blue-500"></i> 消費情境分析
-            </h2>
+    <!-- Section 1: 消費決策 -->
+    <div id="section-decision" class="space-y-8">
+        <section class="glass-morphism rounded-[2.5rem] custom-shadow p-6 md:p-10">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-2xl font-black text-slate-800 italic">AI 智能分析</h2>
+                <span class="text-[10px] font-black bg-blue-600 text-white px-3 py-1 rounded-full uppercase tracking-widest">Powered by Gemini</span>
+            </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div class="space-y-2">
-                    <label class="text-sm font-bold text-slate-600 ml-1">類別</label>
-                    <select id="category" onchange="handleCategoryChange()" class="w-full bg-slate-50 border-none rounded-2xl p-4 focus:ring-2 focus:ring-blue-500 outline-none font-medium">
-                        <option value="online">一般網購 (HKD)</option>
-                        <option value="sim_online">指定網購 (淘寶/HKTV/Amazon等)</option>
-                        <option value="dining">本地餐飲 (HKD)</option>
-                        <option value="delivery">外送平台 (Foodpanda/Deliveroo)</option>
-                        <option value="supermarket">超市/百貨 (HKD)</option>
-                        <option value="medical">醫療/健身 (單筆$300+)</option>
-                        <option value="transport">交通 (隧道/巴士/地鐵)</option>
-                        <option value="overseas">海外簽賬 (外幣)</option>
-                        <option value="other">其他項目...</option>
-                    </select>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="space-y-3">
+                    <label class="text-xs font-black text-[#111FA2] opacity-50 uppercase tracking-widest ml-1">我想在...</label>
+                    <input type="text" id="freeText" placeholder="例如：Fitness First, 診所, 網購..." class="w-full bg-white border-2 border-slate-100 rounded-2xl p-4 outline-none font-bold text-slate-700 focus:border-[#5478FF] transition-all" oninput="toggleCategoryHint()">
+                    <p id="aiHint" class="text-[10px] text-blue-500 font-bold ml-2 opacity-0 transition-opacity">AI 將自動判斷分類（包括健身/醫療）</p>
                 </div>
-
-                <div id="customGroup" class="space-y-2 hidden">
-                    <label class="text-sm font-bold text-slate-600 ml-1">項目關鍵字</label>
-                    <input type="text" id="customInput" placeholder="例如：誠品、快餐" class="w-full bg-slate-50 border-none rounded-2xl p-4 focus:ring-2 focus:ring-blue-500 outline-none font-medium">
-                </div>
-
-                <div class="space-y-2">
-                    <label class="text-sm font-bold text-slate-600 ml-1">預算金額 (HKD)</label>
-                    <input type="number" id="amount" placeholder="輸入金額" class="w-full bg-slate-50 border-none rounded-2xl p-4 focus:ring-2 focus:ring-blue-500 outline-none font-medium">
+                <div class="space-y-3">
+                    <label class="text-xs font-black text-[#111FA2] opacity-50 uppercase tracking-widest ml-1">金額 (HKD)</label>
+                    <input type="number" id="amount" value="1000" class="w-full bg-white border-2 border-slate-100 rounded-2xl p-4 outline-none font-bold text-slate-700 focus:border-[#5478FF]">
                 </div>
             </div>
 
-            <button onclick="runAnalysis()" class="w-full mt-8 bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-slate-200 active:scale-[0.98]">
-                開始分析
+            <div class="mt-6 space-y-3">
+                <label class="text-xs font-black text-[#111FA2] opacity-50 uppercase tracking-widest ml-1">手動分類 (AI 若判斷不準可手選)</label>
+                <select id="category" class="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl p-4 outline-none font-bold text-slate-400 focus:text-slate-700 focus:border-[#5478FF]">
+                    <option value="online">網上購物 (Online)</option>
+                    <option value="dining">餐飲美食 (Dining)</option>
+                    <option value="fitness_medical">健身及醫療 (Fitness/Medical)</option>
+                    <option value="supermarket">超市/便利店 (Supermarket)</option>
+                    <option value="overseas">海外旅遊/外幣 (Overseas)</option>
+                    <option value="general" selected>其他一般消費 (General)</option>
+                </select>
+            </div>
+            
+            <button id="analyzeBtn" onclick="runAIAnalysis()" class="w-full mt-8 bg-[#111FA2] hover:bg-[#5478FF] text-white font-black py-5 rounded-2xl transition-all shadow-2xl hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3">
+                <i class="fa-solid fa-sparkles"></i> 獲取最優方案
             </button>
 
-            <div id="resultArea" class="mt-8 hidden">
-                <div class="p-6 rounded-3xl bg-blue-600 text-white shadow-lg shadow-blue-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <p class="text-blue-100 text-xs font-bold uppercase tracking-widest">推薦最優卡片</p>
-                        <h3 id="resCardName" class="text-2xl font-black mt-1">---</h3>
-                        <p id="resDetail" class="text-sm mt-2 opacity-90 font-medium"></p>
-                    </div>
-                    <button id="resDetailBtn" class="bg-white/20 hover:bg-white/30 px-6 py-2 rounded-xl text-sm font-bold transition-all">
-                        查看建議細節
-                    </button>
+            <div id="loadingArea" class="mt-10 hidden space-y-4">
+                <div class="h-12 w-full loading-shimmer rounded-xl"></div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="h-32 loading-shimmer rounded-3xl"></div>
+                    <div class="h-32 loading-shimmer rounded-3xl"></div>
+                    <div class="h-32 loading-shimmer rounded-3xl"></div>
                 </div>
             </div>
-        </section>
 
-        <!-- List Section -->
-        <section class="bg-white rounded-[2rem] custom-shadow overflow-hidden border border-white">
-            <div class="p-6 border-b border-slate-50 flex justify-between items-center">
-                <h3 class="font-bold text-slate-800 italic" id="tableHeader">持卡庫清單</h3>
-                <span class="text-xs text-slate-400">點擊按鈕查看分析</span>
+            <div id="resultArea" class="mt-10 space-y-6 hidden">
+                <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100 flex items-start gap-3">
+                    <i class="fa-solid fa-comment-dots text-blue-500 mt-1"></i>
+                    <div>
+                        <p class="text-xs font-black text-blue-900 uppercase">AI 建議分析：</p>
+                        <p id="aiExplanation" class="text-sm text-blue-800 mt-1 font-medium italic"></p>
+                    </div>
+                </div>
+                <div id="top3Container" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Section 2: 還款提醒 -->
+    <div id="section-reminder" class="hidden space-y-6">
+        <div class="flex justify-between items-center px-4">
+            <h2 class="text-2xl font-black text-slate-800">還款狀態管理</h2>
+            <button onclick="resetAllPaid()" class="text-sm font-bold text-[#111FA2] bg-blue-50 px-4 py-2 rounded-xl hover:bg-blue-100 transition-colors">重設本月狀態</button>
+        </div>
+        <div id="reminderGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+    </div>
+
+    <!-- Section 3: 優惠表格 (持卡庫) -->
+    <div id="section-table" class="hidden">
+        <section class="glass-morphism rounded-[2.5rem] custom-shadow overflow-hidden">
+            <div class="p-8 flex justify-between items-center bg-white/40">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-800 italic mb-1">我的持卡庫</h2>
+                    <p class="text-slate-400 text-sm font-medium">點擊卡片查看詳細分析</p>
+                </div>
+                <button onclick="openAddCardModal()" class="bg-[#111FA2] text-white px-6 py-3 rounded-2xl font-black shadow-lg hover:bg-[#5478FF] transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> 添加卡片
+                </button>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
-                    <thead class="bg-slate-50 text-slate-400 text-[10px] uppercase font-black tracking-widest">
-                        <tr>
-                            <th class="px-6 py-4">信用卡</th>
-                            <th class="px-6 py-4">核心優勢</th>
-                            <th class="px-6 py-4 text-right">動作</th>
+                    <thead>
+                        <tr class="bg-slate-50 text-[10px] font-black text-slate-400 tracking-widest uppercase">
+                            <th class="px-8 py-4">信用卡名稱</th>
+                            <th class="px-8 py-4">核心優勢</th>
+                            <th class="px-8 py-4 text-right">動作</th>
                         </tr>
                     </thead>
-                    <tbody id="summaryTable" class="text-sm divide-y divide-slate-50"></tbody>
+                    <tbody id="tableBody"></tbody>
                 </table>
             </div>
         </section>
-    </main>
+    </div>
+</div>
 
-    <!-- Tab 2: Reminder -->
-    <main id="tab-content-reminder" class="hidden space-y-6">
-        <div class="flex justify-between items-center px-2">
-            <h2 class="text-xl font-bold text-slate-800">本月還款狀態</h2>
-            <button onclick="resetAllPaid()" class="text-xs font-bold text-blue-600 hover:underline">重設全部</button>
+<!-- Add Card Modal -->
+<div id="addCardModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden p-8 animate-in fade-in zoom-in duration-300">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-2xl font-black text-slate-800">添加新信用卡</h3>
+            <button onclick="closeAddCardModal()" class="text-slate-300 hover:text-slate-500 text-2xl transition-colors"><i class="fa-solid fa-circle-xmark"></i></button>
         </div>
-        <div id="reminderGrid" class="grid grid-cols-1 md:grid-cols-2 gap-8"></div>
-    </main>
-
-    <!-- Detail Modal -->
-    <div id="cardModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden modal-enter">
-            <div id="modalHeader" class="p-8 pb-4 flex justify-between items-start">
-                <div>
-                    <h3 id="modalTitle" class="text-2xl font-black text-slate-800">卡片詳解</h3>
-                    <p id="modalTags" class="text-blue-600 font-bold text-sm mt-1"></p>
+        <form id="addCardForm" class="space-y-4 overflow-y-auto max-h-[70vh] pr-2">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-500 ml-1">卡片名稱</label>
+                    <input type="text" id="newCardName" required placeholder="例如：恆生 Travel+" class="w-full bg-slate-50 border-2 border-slate-50 rounded-xl p-3 outline-none focus:border-blue-500 font-bold transition-all">
                 </div>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-2xl"><i class="fa-solid fa-circle-xmark"></i></button>
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-500 ml-1">卡片顏色</label>
+                    <input type="color" id="newCardColor" value="#111FA2" class="w-full h-12 bg-slate-50 border-2 border-slate-50 rounded-xl p-1 outline-none cursor-pointer">
+                </div>
             </div>
-            <div class="p-8 pt-0 space-y-6 overflow-y-auto max-h-[70vh]">
-                <div class="bg-slate-50 rounded-2xl p-4">
-                    <h4 class="font-bold text-slate-800 mb-2 border-l-4 border-blue-500 pl-2 text-sm">詳細分析</h4>
-                    <p id="modalAnalysis" class="text-slate-600 text-sm leading-relaxed"></p>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-500 ml-1">回贈類型</label>
+                    <select id="newCardType" class="w-full bg-slate-50 border-2 border-slate-50 rounded-xl p-3 outline-none font-bold cursor-pointer">
+                        <option value="cash">現金回贈 (%)</option>
+                        <option value="miles">航空里數 (HKD/里)</option>
+                    </select>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-green-50 rounded-2xl p-4 border border-green-100">
-                        <h4 class="font-bold text-green-800 mb-1 text-xs">優點 / 推薦用法</h4>
-                        <ul id="modalPros" class="text-[11px] text-green-700 list-disc ml-3 space-y-1"></ul>
-                    </div>
-                    <div class="bg-red-50 rounded-2xl p-4 border border-red-100">
-                        <h4 class="font-bold text-red-800 mb-1 text-xs">缺點 / 限制</h4>
-                        <ul id="modalCons" class="text-[11px] text-red-700 list-disc ml-3 space-y-1"></ul>
-                    </div>
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-500 ml-1">每月還款日 (1-31)</label>
+                    <input type="number" id="newCardDue" required min="1" max="31" value="1" class="w-full bg-slate-50 border-2 border-slate-50 rounded-xl p-3 outline-none font-bold">
                 </div>
-                <div class="border-t border-slate-100 pt-4">
-                    <p id="modalTip" class="text-xs text-slate-400 italic bg-amber-50 p-3 rounded-xl text-amber-700"></p>
+            </div>
+            <div class="border-t border-slate-100 pt-4 mt-2">
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">回贈比率設定</p>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 ml-1">網購</label><input type="number" step="0.1" id="rateOnline" value="0.4" class="w-full bg-slate-50 border-2 border-slate-50 rounded-xl p-2 outline-none font-bold"></div>
+                    <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 ml-1">餐飲</label><input type="number" step="0.1" id="rateDining" value="0.4" class="w-full bg-slate-50 border-2 border-slate-50 rounded-xl p-2 outline-none font-bold"></div>
+                    <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 ml-1">健身醫療</label><input type="number" step="0.1" id="rateFitMed" value="0.4" class="w-full bg-slate-50 border-2 border-slate-50 rounded-xl p-2 outline-none font-bold"></div>
+                    <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 ml-1">超市</label><input type="number" step="0.1" id="rateSuper" value="0.4" class="w-full bg-slate-50 border-2 border-slate-50 rounded-xl p-2 outline-none font-bold"></div>
+                    <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 ml-1">海外</label><input type="number" step="0.1" id="rateOverseas" value="0.4" class="w-full bg-slate-50 border-2 border-slate-50 rounded-xl p-2 outline-none font-bold"></div>
+                    <div class="space-y-1"><label class="text-[10px] font-bold text-slate-500 ml-1">一般</label><input type="number" step="0.1" id="rateGeneral" value="0.4" class="w-full bg-slate-50 border-2 border-slate-50 rounded-xl p-2 outline-none font-bold"></div>
                 </div>
+            </div>
+            <button type="submit" class="w-full bg-[#111FA2] text-white py-4 rounded-2xl font-black mt-6 shadow-xl hover:bg-[#5478FF] transition-all active:scale-95">確認添加至持卡庫</button>
+        </form>
+    </div>
+</div>
+
+<!-- Detail Modal -->
+<div id="detailModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+        <div id="modalHeader" class="p-8 text-white relative">
+            <button onclick="closeModal()" class="absolute top-6 right-6 text-white/80 hover:text-white text-2xl"><i class="fa-solid fa-circle-xmark"></i></button>
+            <div class="flex items-center gap-4">
+                <div id="modalIcon" class="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-3xl"></div>
+                <div>
+                    <h3 id="modalCardName" class="text-3xl font-black"></h3>
+                    <p id="modalCardType" class="text-white/70 font-bold uppercase text-xs tracking-widest mt-1"></p>
+                </div>
+            </div>
+        </div>
+        <div class="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <h4 class="font-black text-slate-800 flex items-center gap-2"><i class="fa-solid fa-thumbs-up text-green-500"></i> 優點 / 推薦用法</h4>
+                    <ul id="modalPros" class="text-slate-600 text-sm space-y-1 list-disc list-inside"></ul>
+                </div>
+                <div class="space-y-2">
+                    <h4 class="font-black text-slate-800 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-amber-500"></i> 缺點 / 限制</h4>
+                    <ul id="modalCons" class="text-slate-600 text-sm space-y-1 list-disc list-inside"></ul>
+                </div>
+            </div>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-2xl">
+                <h4 class="font-black text-blue-900 flex items-center gap-2 mb-2"><i class="fa-solid fa-lightbulb text-amber-400"></i> 提醒與上限</h4>
+                <p id="modalLimit" class="text-blue-800 text-sm leading-relaxed font-medium"></p>
+            </div>
+            <div id="deleteContainer" class="flex justify-end pt-4">
+                <button id="deleteCardBtn" class="text-red-400 text-xs font-bold hover:text-red-600 transition-colors flex items-center gap-1">
+                    <i class="fa-solid fa-trash-can"></i> 刪除此卡片 (不可撤銷)
+                </button>
             </div>
         </div>
     </div>
-
-    <footer class="mt-12 text-center pb-8">
-        <p class="text-slate-400 text-xs font-medium uppercase tracking-tighter">
-            * 數據模擬：2026年最新條款 | 投資及消費請謹慎
-        </p>
-    </footer>
 </div>
 
 <script>
-    // 狀態追蹤
-    let paidStatus = JSON.parse(localStorage.getItem('cardPaidStatus')) || {};
+    const apiKey = ""; 
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'credit-card-helper-v45';
 
-    const cards = [
+    const defaultCards = [
         { 
-            id: 'aeon', name: "Aeon Wakuwaku", color: "linear-gradient(135deg, #ff6b6b, #ee5253)",
-            online: 0.06, sim_online: 0.06, dining: 0.01, delivery: 0.06, general: 0.004, supermarket: 0.004, medical: 0.01, transport: 0.004, streaming: 0.06, overseas: 0.03, 
-            tags: "網購 6% / 海外 3%", limit: "月回贈上限 $200 (簽賬約 $3,333)", 
-            analysis: "目前市場最強的網購卡之一。6% 的高回贈率適用於絕大部分網上簽賬。建議優先用這張卡處理所有非指定平台的網購。",
-            pros: ["網購 6% 回贈非常直接", "海外簽賬 3% 且豁免手續費", "門檻極低"],
-            cons: ["每月上限 $200 很容易爆", "實體店簽賬極低 (0.4%)"],
-            dueDay: 13 
+            id: "dbs-eminent", name: "DBS Eminent Visa", rewardType: "cash", color: "#ED1C24", dueDay: 15,
+            rates: { online: 5, dining: 5, fitness_medical: 5, supermarket: 1, overseas: 1, general: 1 },
+            pros: ["餐飲、健身、醫療、網購 5% 回贈", "醫療類別在市場中極具競爭力", "適合本地大宗日常消費"],
+            cons: ["單筆簽賬須滿 HK$300 才有 5%", "每月設有額外回贈上限"],
+            limit: "指定類別 5% 回贈，Visa Infinite 每月上限 HK$400；Visa Signature 每月上限 HK$200。"
         },
         { 
-            id: 'scb', name: "SCB Cathay", color: "linear-gradient(135deg, #006564, #004d4b)",
-            online: 0.04, sim_online: 0.04, dining: 0.25, delivery: 0.25, general: 0.16, supermarket: 0.16, medical: 0.16, transport: 0.16, streaming: 0.16, overseas: 0.25, 
-            tags: "$4/里 (餐飲海外) / $6/里 (其他)", isMiles: true, 
-            analysis: "核心里數卡，適合餐飲與外幣消費。如果你有定期旅遊需求，這張卡提供的國泰里數累積速度非常快。",
-            pros: ["餐飲、海外消費 $4/里 無上限", "自動轉入 Cathay 賬戶", "馬可孛羅會籍優惠"],
-            cons: ["里數會過期 (除非有活動延續)", "非里數愛好者回贈價值較低"],
-            dueDay: 19 
+            id: "aeon-waku", name: "Aeon WakuWaku", rewardType: "cash", color: "#C80074", dueDay: 2,
+            rates: { online: 6, dining: 1, fitness_medical: 1, supermarket: 1, overseas: 1, general: 0.5 },
+            pros: ["網購神卡，常規網購回贈高", "日本簽賬有額外優勢"],
+            cons: ["每月回贈上限較低"],
+            limit: "網購 6% 回贈每月上限 $200 (即月簽賬約 HK$3,333 封頂)。"
         },
         { 
-            id: 'mox', name: "Mox Credit", color: "linear-gradient(135deg, #000000, #2d3436)",
-            online: 0.01, sim_online: 0.01, dining: 0.01, delivery: 0.01, general: 0.01, supermarket: 0.03, medical: 0.01, transport: 0.01, streaming: 0.01, overseas: 0.01, 
-            tags: "超市 3%", 
-            analysis: "即使沒有 25 萬存款，在指定超市消費仍有 3% 無上限回贈。適合日常超市雜貨採購。",
-            pros: ["指定超市 3% 無上限回贈", "申請極速，虛擬卡即批即用"],
-            cons: ["一般消費僅 1%", "回贈需視乎 Mox 條款更新"],
-            dueDay: 11 
+            id: "sim-platinum", name: "Sim Platinum", rewardType: "cash", color: "#1E2A5E", dueDay: 25,
+            rates: { online: 8, dining: 3, fitness_medical: 3, supermarket: 3, overseas: 3, general: 0.4 },
+            pros: ["網購回贈率市場最高之一", "指定連鎖店及外送有額外獎賞"],
+            cons: ["每月回贈上限 HK$200", "一般簽賬回贈偏低"],
+            limit: "網購 8% 回贈上限為每月簽賬 HK$2,500。"
         },
         { 
-            id: 'dbs', name: "DBS Eminent", color: "linear-gradient(135deg, #e31b23, #b3151b)",
-            online: 0.01, sim_online: 0.01, dining: 0.05, delivery: 0.01, general: 0.01, supermarket: 0.01, medical: 0.05, transport: 0.01, streaming: 0.01, overseas: 0.01, 
-            tags: "餐飲/醫療 5%", 
-            analysis: "專攻餐飲與醫療簽賬。5% 的回贈在醫療類別（中西醫、物理治療）中屬市場少見，適合支付較大額的診所開支。",
-            pros: ["餐飲與醫療類別回贈極高", "DBS iWealth App 兌換方便"],
-            cons: ["單筆簽賬須滿 $300 才享有 5%", "每月有回贈上限"],
-            dueDay: 1 
+            id: "mox-credit", name: "Mox Credit", rewardType: "cash", color: "#00E08B", dueDay: 10,
+            rates: { online: 3, dining: 3, fitness_medical: 1, supermarket: 3, overseas: 3, general: 1 },
+            pros: ["指定創始商戶 3% 無上限回贈", "每日結算，現金回贈即時到賬"],
+            cons: ["需維持一定銀行存款餘額以享高回贈"],
+            limit: "指定商戶 3% 回贈，一般簽賬 1%。"
         },
         { 
-            id: 'hsbc', name: "HSBC Visa Platinum", color: "linear-gradient(135deg, #db0011, #a3000d)",
-            online: 0.004, sim_online: 0.004, dining: 0.024, delivery: 0.024, general: 0.004, supermarket: 0.024, medical: 0.004, transport: 0.004, streaming: 0.004, overseas: 0.004, 
-            tags: "2.4% (最紅自主)", 
-            analysis: "前稱 Visa Platinum。此卡核心價值在於「最紅自主獎賞」，若將 5X 倍數全部分配至單一類別（如餐飲或超市），回贈可達 2.4%。",
-            pros: ["自選類別回贈穩定 (2.4%)", "滙豐經常有額外獎賞推廣"],
-            cons: ["基本回贈僅 0.4%", "必須在自選類別消費才划算"],
-            dueDay: 26 
+            id: "sc-cathay", name: "SCB Cathay", rewardType: "miles", color: "#006414", dueDay: 20,
+            rates: { online: 4, dining: 4, fitness_medical: 6, supermarket: 6, overseas: 4, general: 6 },
+            pros: ["里數直接存入國泰帳戶", "餐飲、網購及海外簽賬 $4/里"],
+            cons: ["有固定年薪要求"],
+            limit: "里數回贈無特定月上限，但需注意 Asia Miles 有效期限制。"
         },
         { 
-            id: 'sim', name: "Sim Platinum", color: "linear-gradient(135deg, #4834d4, #686de0)",
-            online: 0.004, sim_online: 0.08, dining: 0.004, delivery: 0.08, general: 0.004, supermarket: 0.004, medical: 0.004, transport: 0.08, streaming: 0.08, overseas: 0.004, 
-            tags: "指定網購 8%", 
-            analysis: "針對特定店舖（淘寶、HKTVmall、Amazon等）提供 8% 高額回贈。注意：單筆必須滿 $500 才能觸發高回贈。",
-            pros: ["指定網購 8% 為全港最高水平", "包含交通、外送服務"],
-            cons: ["單筆必須滿 $500", "非指定店回贈極低 (0.4%)"],
-            dueDay: 14 
+            id: "citi-cashback", name: "Citibank Cashback", rewardType: "cash", color: "#004A99", dueDay: 28,
+            rates: { online: 1, dining: 2, fitness_medical: 1, supermarket: 1, overseas: 2, general: 1 },
+            pros: ["餐飲、酒店及海外簽賬無上限 2% 回贈", "回贈自動扣減月結單"],
+            cons: ["網購及一般簽賬回贈率較普通"],
+            limit: "回贈金額無上限，適合大額餐飲或旅遊消費。"
         }
     ];
 
-    function handleCategoryChange() {
-        const cat = document.getElementById('category').value;
-        document.getElementById('customGroup').classList.toggle('hidden', cat !== 'other');
+    let customCards = JSON.parse(localStorage.getItem('card_custom_v45')) || [];
+    let cardData = [...defaultCards, ...customCards];
+    let paidStatus = JSON.parse(localStorage.getItem('card_paid_v45')) || {};
+
+    // AI Helper
+    async function callGemini(prompt, retries = 5) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const payload = {
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { 
+                responseMimeType: "application/json", 
+                responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                        category: { type: "STRING", enum: ["online", "dining", "fitness_medical", "supermarket", "overseas", "general"] },
+                        explanation: { type: "STRING" }
+                    },
+                    required: ["category", "explanation"]
+                }
+            }
+        };
+
+        for (let i = 0; i < retries; i++) {
+            try {
+                const response = await fetch(url, { method: 'POST', body: JSON.stringify(payload) });
+                const data = await response.json();
+                return JSON.parse(data.candidates[0].content.parts[0].text);
+            } catch (err) {
+                if (i === retries - 1) throw err;
+                await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+            }
+        }
     }
 
-    function switchTab(tab) {
-        const isQuery = tab === 'query';
-        document.getElementById('tab-content-query').classList.toggle('hidden', !isQuery);
-        document.getElementById('tab-content-reminder').classList.toggle('hidden', isQuery);
-        document.getElementById('btn-query').className = isQuery ? "px-6 py-2 rounded-xl font-bold transition-all text-blue-600 bg-blue-50" : "px-6 py-2 rounded-xl font-bold transition-all text-slate-400 hover:text-slate-600";
-        document.getElementById('btn-reminder').className = !isQuery ? "px-6 py-2 rounded-xl font-bold transition-all text-blue-600 bg-blue-50" : "px-6 py-2 rounded-xl font-bold transition-all text-slate-400 hover:text-slate-600";
-        if(!isQuery) renderReminders();
+    async function runAIAnalysis() {
+        const freeText = document.getElementById('freeText').value.trim();
+        const amt = parseFloat(document.getElementById('amount').value) || 0;
+        const resultArea = document.getElementById('resultArea');
+        const loadingArea = document.getElementById('loadingArea');
+        const btn = document.getElementById('analyzeBtn');
+
+        let category = document.getElementById('category').value;
+        let explanation = "基於手動選擇分類的計算結果。";
+
+        btn.disabled = true;
+        resultArea.classList.add('hidden');
+        loadingArea.classList.remove('hidden');
+
+        if (freeText) {
+            try {
+                const aiResult = await callGemini(`分析消費項目： "${freeText}"。
+                類別定義：
+                - online: 網購
+                - dining: 餐廳美食
+                - fitness_medical: 健身房、瑜珈、醫院、診所、體檢、藥局
+                - supermarket: 超市、便利店
+                - overseas: 外幣簽賬
+                - general: 其他
+                請挑選最合適的一個，並簡短解釋。`);
+                category = aiResult.category;
+                explanation = aiResult.explanation;
+                document.getElementById('category').value = category; 
+            } catch (e) {
+                explanation = "AI 分析暫時不可用，已切換至手動選取的分類進行計算。";
+            }
+        }
+
+        let scored = cardData.map(card => {
+            let rawRate = card.rates[category] || card.rates.general || 0;
+            
+            // 特殊邏輯：DBS Eminent 需滿 $300 才有 5%
+            if (card.id === 'dbs-eminent' && amt < 300 && (category === 'dining' || category === 'fitness_medical' || category === 'online')) {
+                rawRate = 1; 
+            }
+
+            let score = card.rewardType === 'cash' ? rawRate : (15 / rawRate); 
+            return { ...card, rawRate, score };
+        }).sort((a, b) => b.score - a.score);
+
+        document.getElementById('aiExplanation').innerText = explanation;
+        document.getElementById('top3Container').innerHTML = scored.slice(0, 3).map((card, idx) => `
+            <div class="relative p-6 rounded-3xl bg-white border-2 border-slate-50 shadow-sm hover:border-[#111FA2] transition-all cursor-pointer group" onclick="openModal('${card.id}')">
+                <div class="rank-badge ${idx === 0 ? 'bg-amber-400' : (idx === 1 ? 'bg-slate-400' : 'bg-orange-400')}">${idx + 1}</div>
+                <div class="w-10 h-10 rounded-xl mb-4 group-hover:scale-110 transition-transform" style="background: ${card.color}"></div>
+                <h4 class="font-black text-slate-800 truncate">${card.name}</h4>
+                <p class="text-xl font-black text-[#111FA2] mt-1">
+                    ${card.rewardType === 'cash' ? 'HK$'+(amt * card.rawRate/100).toFixed(1) : Math.floor(amt/card.rawRate)+' 里'}
+                </p>
+                <p class="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-tighter">
+                    效益: ${card.rewardType === 'cash' ? card.rawRate+'% 回贈' : '$'+card.rawRate+'/里'}
+                </p>
+            </div>
+        `).join('');
+
+        loadingArea.classList.add('hidden');
+        resultArea.classList.remove('hidden');
+        btn.disabled = false;
     }
 
-    function runAnalysis() {
-        let cat = document.getElementById('category').value;
-        const amount = parseFloat(document.getElementById('amount').value);
-        if (!amount || amount <= 0) return;
-        let best = null;
-        let maxVal = -1;
-        cards.forEach(card => {
-            let rate = card[cat] || card.general;
-            let val = card.isMiles ? (amount * rate * 0.1) : (amount * rate);
-            if (card.id === 'dbs' && amount < 300 && (cat === 'dining' || cat === 'medical')) val = amount * 0.01;
-            if (card.id === 'sim' && cat === 'sim_online' && amount < 500) val = amount * 0.004;
-            if (val > maxVal) { maxVal = val; best = card; }
+    function toggleCategoryHint() {
+        const hasText = document.getElementById('freeText').value.length > 0;
+        document.getElementById('aiHint').style.opacity = hasText ? "1" : "0";
+    }
+
+    function switchSection(target) {
+        ['decision', 'reminder', 'table'].forEach(s => {
+            document.getElementById(`section-${s}`).classList.toggle('hidden', s !== target);
+            document.getElementById(`btn-${s}`).classList.toggle('tab-active', s === target);
+            document.getElementById(`btn-${s}`).classList.toggle('text-slate-500', s !== target);
         });
-        document.getElementById('resultArea').classList.remove('hidden');
-        document.getElementById('resCardName').innerText = best.name;
-        document.getElementById('resDetail').innerText = `預計回贈價值: $${maxVal.toFixed(2)} (${(maxVal/amount*100).toFixed(1)}%) | ${best.limit}`;
-        document.getElementById('resDetailBtn').onclick = () => openModal(best.id);
+        if(target === 'reminder') renderReminders();
+        if(target === 'table') renderTable();
+    }
+
+    function renderTable() {
+        const body = document.getElementById('tableBody');
+        body.innerHTML = cardData.map(card => {
+            let maxRate = Math.max(...Object.values(card.rates));
+            let coreBenefit = card.rewardType === 'cash' ? `高達 ${maxRate}% 回贈` : `低至 $${maxRate}/里`;
+            return `
+                <tr class="border-b border-slate-50 hover:bg-white/50 cursor-pointer group" onclick="openModal('${card.id}')">
+                    <td class="px-8 py-6 font-bold text-slate-700">
+                        <div class="flex items-center gap-3">
+                             <div class="w-3 h-3 rounded-full" style="background: ${card.color}"></div>
+                             ${card.name}
+                        </div>
+                    </td>
+                    <td class="px-8 py-6 text-sm font-bold text-blue-600">${coreBenefit}</td>
+                    <td class="px-8 py-6 text-right text-slate-300 group-hover:text-blue-500 transition-colors"><i class="fa-solid fa-chevron-right text-sm"></i></td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function renderReminders() {
+        const grid = document.getElementById('reminderGrid');
+        grid.innerHTML = cardData.map(card => {
+            const isPaid = paidStatus[card.id];
+            return `
+                <div class="cursor-pointer group" onclick="togglePaid('${card.id}')">
+                    <div class="card-preview p-6 text-white shadow-xl ${isPaid ? 'card-done' : ''} group-hover:-translate-y-1 transition-all" style="background: ${card.color}">
+                        <div class="chip mb-6"></div>
+                        <p class="text-lg font-black leading-tight h-12 overflow-hidden">${card.name}</p>
+                        <div class="absolute bottom-6 right-6 text-right">
+                            <p class="text-[9px] opacity-60 uppercase font-bold">還款日</p>
+                            <p class="text-3xl font-mono font-black">${card.dueDay}</p>
+                        </div>
+                        ${isPaid ? '<div class="absolute inset-0 bg-black/20 flex items-center justify-center backdrop-blur-[2px] animate-in fade-in"><i class="fa-solid fa-check-circle text-5xl"></i></div>' : ''}
+                    </div>
+                </div>`;
+        }).join('');
     }
 
     function togglePaid(id) {
         paidStatus[id] = !paidStatus[id];
-        localStorage.setItem('cardPaidStatus', JSON.stringify(paidStatus));
+        localStorage.setItem('card_paid_v45', JSON.stringify(paidStatus));
         renderReminders();
     }
 
     function resetAllPaid() {
+        if(!confirm("確定要重置本月所有卡片的還款狀態嗎？")) return;
         paidStatus = {};
-        localStorage.setItem('cardPaidStatus', JSON.stringify(paidStatus));
+        localStorage.setItem('card_paid_v45', JSON.stringify(paidStatus));
         renderReminders();
     }
 
     function openModal(id) {
-        const card = cards.find(c => c.id === id);
-        document.getElementById('modalTitle').innerText = card.name;
-        document.getElementById('modalTags').innerText = card.tags;
-        document.getElementById('modalAnalysis').innerText = card.analysis;
-        document.getElementById('modalTip').innerText = `💡 提醒：${card.limit}`;
-        document.getElementById('modalPros').innerHTML = card.pros.map(p => `<li>${p}</li>`).join('');
-        document.getElementById('modalCons').innerHTML = card.cons.map(c => `<li>${c}</li>`).join('');
-        document.getElementById('cardModal').classList.remove('hidden');
+        const card = cardData.find(c => c.id === id);
+        if(!card) return;
+        document.getElementById('modalHeader').style.background = card.color;
+        document.getElementById('modalCardName').innerText = card.name;
+        document.getElementById('modalCardType').innerText = card.rewardType === 'cash' ? '現金回贈信用卡' : '里數信用卡';
+        document.getElementById('modalIcon').innerHTML = `<i class="fa-solid ${card.rewardType === 'cash' ? 'fa-wallet' : 'fa-plane-up'}"></i>`;
+        document.getElementById('modalPros').innerHTML = (card.pros || ["核心分類回贈極高", "適合日常消費"]).map(p => `<li>${p}</li>`).join('');
+        document.getElementById('modalCons').innerHTML = (card.cons || ["一般簽賬回贈較低", "需注意封頂上限"]).map(c => `<li>${c}</li>`).join('');
+        document.getElementById('modalLimit').innerText = card.limit || "建議在使用前查看銀行最新條款，注意每月封頂金額或最低消費要求。";
+        
+        const deleteBtn = document.getElementById('deleteCardBtn');
+        if(id.startsWith('custom-')) {
+            document.getElementById('deleteContainer').classList.remove('hidden');
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteCard(card.id);
+            };
+        } else {
+            document.getElementById('deleteContainer').classList.add('hidden');
+        }
+        
+        document.getElementById('detailModal').classList.remove('hidden');
     }
 
-    function closeModal() {
-        document.getElementById('cardModal').classList.add('hidden');
+    function closeModal() { document.getElementById('detailModal').classList.add('hidden'); }
+
+    function openAddCardModal() { document.getElementById('addCardModal').classList.remove('hidden'); }
+    function closeAddCardModal() { document.getElementById('addCardModal').classList.add('hidden'); }
+
+    document.getElementById('addCardForm').onsubmit = (e) => {
+        e.preventDefault();
+        const newCard = {
+            id: 'custom-' + Date.now(),
+            name: document.getElementById('newCardName').value,
+            color: document.getElementById('newCardColor').value,
+            rewardType: document.getElementById('newCardType').value,
+            dueDay: parseInt(document.getElementById('newCardDue').value),
+            rates: {
+                online: parseFloat(document.getElementById('rateOnline').value),
+                dining: parseFloat(document.getElementById('rateDining').value),
+                fitness_medical: parseFloat(document.getElementById('rateFitMed').value),
+                supermarket: parseFloat(document.getElementById('rateSuper').value),
+                overseas: parseFloat(document.getElementById('rateOverseas').value),
+                general: parseFloat(document.getElementById('rateGeneral').value),
+            },
+            pros: ["自定義添加卡片"],
+            cons: ["需手動更新優惠資料"],
+            limit: "此卡為自定義卡片，回贈上限請參閱發卡銀行官網。"
+        };
+        customCards.push(newCard);
+        localStorage.setItem('card_custom_v45', JSON.stringify(customCards));
+        cardData = [...defaultCards, ...customCards];
+        renderTable();
+        closeAddCardModal();
+        e.target.reset();
+    };
+
+    function deleteCard(id) {
+        if (!confirm('確定要永久刪除這張卡片嗎？')) return;
+        customCards = customCards.filter(c => c.id !== id);
+        localStorage.setItem('card_custom_v45', JSON.stringify(customCards));
+        cardData = [...defaultCards, ...customCards];
+        renderTable();
+        closeModal();
     }
 
-    function getRemainingDays(dueDay) {
-        const now = new Date();
-        let due = new Date(now.getFullYear(), now.getMonth(), dueDay);
-        if (now.getDate() >= dueDay) due.setMonth(due.getMonth() + 1);
-        return Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+    window.onclick = (e) => { 
+        if(e.target == document.getElementById('detailModal')) closeModal(); 
+        if(e.target == document.getElementById('addCardModal')) closeAddCardModal(); 
     }
-
-    function renderReminders() {
-        const container = document.getElementById('reminderGrid');
-        container.innerHTML = "";
-        const sorted = [...cards].sort((a, b) => {
-            if (paidStatus[a.id] !== paidStatus[b.id]) return paidStatus[a.id] ? 1 : -1;
-            return getRemainingDays(a.dueDay) - getRemainingDays(b.dueDay);
-        });
-
-        sorted.forEach(card => {
-            const left = getRemainingDays(card.dueDay);
-            const isPaid = paidStatus[card.id];
-            const urgent = left <= 3 && !isPaid;
-            
-            container.innerHTML += `
-                <div class="relative group">
-                    <!-- 信用卡圖案 -->
-                    <div class="card-preview p-6 text-white shadow-xl mb-4 ${isPaid ? 'card-done' : ''}" style="background: ${card.color}">
-                        <div class="flex justify-between items-start">
-                            <div class="chip"></div>
-                            <i class="fa-solid fa-wifi rotate-90 text-xl opacity-50"></i>
-                        </div>
-                        <div class="mt-8">
-                            <p class="text-[10px] uppercase tracking-widest opacity-70">Card Member</p>
-                            <p class="text-lg font-bold tracking-tight">${card.name}</p>
-                        </div>
-                        <div class="absolute bottom-6 right-6 text-right">
-                            <p class="text-[8px] uppercase opacity-70">Due Date</p>
-                            <p class="font-mono font-bold">${card.dueDay} / Month</p>
-                        </div>
-                    </div>
-                    
-                    <!-- 控制區 -->
-                    <div class="flex items-center justify-between px-2">
-                        <div>
-                            ${isPaid ? 
-                                '<span class="bg-green-100 text-green-700 text-[10px] font-black px-2 py-1 rounded-md uppercase">已清數</span>' : 
-                                `<p class="text-sm font-bold ${urgent ? 'text-red-600 animate-pulse' : 'text-slate-600'}">
-                                    剩餘 <span class="text-xl">${left}</span> 天
-                                </p>`
-                            }
-                        </div>
-                        <button onclick="togglePaid('${card.id}')" class="flex items-center gap-2 group">
-                            <span class="text-xs font-bold text-slate-400 group-hover:text-slate-600">${isPaid ? '取消標記' : '標記已還'}</span>
-                            <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${isPaid ? 'bg-green-500 border-green-500 text-white' : 'border-slate-200 text-transparent'}">
-                                <i class="fa-solid fa-check text-sm"></i>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-            `;
-        });
-    }
-
-    function init() {
-        const t = document.getElementById('summaryTable');
-        cards.forEach(c => {
-            t.innerHTML += `
-                <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="px-6 py-5 font-bold text-slate-700">${c.name}</td>
-                    <td class="px-6 py-5 font-medium text-blue-600">${c.tags}</td>
-                    <td class="px-6 py-5 text-right">
-                        <button onclick="openModal('${c.id}')" class="text-slate-400 hover:text-blue-600 transition-all">
-                            <i class="fa-solid fa-circle-info text-xl"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-        });
-        const now = new Date();
-        document.getElementById('dateDisplay').innerText = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 | 數據運行中`;
-    }
-
-    window.onload = init;
+    
+    window.onload = () => { 
+        renderTable(); 
+        renderReminders(); 
+    };
 </script>
-
 </body>
 </html>
